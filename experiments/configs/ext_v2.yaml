@@ -1,0 +1,113 @@
+# 확장 v2: 7-Scenes 7장면 + NRGBD 4장면 + Track A v2(비/저조도).
+# core_v1/ext_v1과 동일 프로토콜(size 518, stride, eval 규격)을 유지해
+# 세 실험의 수치를 직접 비교한다.
+#
+# - 7-Scenes 4개 신규 장면(office/pumpkin/redkitchen/stairs)과 heads는
+#   seq: auto -> 서버 스크립트가 TestSplit.txt 첫 시퀀스로 확정해
+#   configs/_ext_v2_resolved.yaml 에 기록한다(평가 전용 = C3 학습 오염 방지).
+# - rain/lowlight는 Track A v2 물리 근사 합성(weather_ext.py).
+# - c2(restored)는 fog/smoke/rain 변형에 ViWS-Net 복원 결과가 있을 때만
+#   실행되고 lowlight는 [MISSING INPUT]으로 자동 건너뛴다.
+
+experiment: ext_v2
+
+streamvggt:
+  src_dir: ../../third_party/StreamVGGT/src
+  weights: ../../third_party/StreamVGGT/ckpt/checkpoints.pth
+  device: cuda
+  size: 518
+  crop: false
+
+data:
+  seven_scenes_root: ../../data/7scenes
+  neural_rgbd_root: ../../data/neural_rgbd
+  sequences:
+    - id: 7scenes_chess_seq-01
+      dataset: seven_scenes
+      scene: chess
+      seq: seq-01
+      stride: 50          # core_v1 프로토콜 유지
+    - id: 7scenes_fire_seq-02
+      dataset: seven_scenes
+      scene: fire
+      seq: seq-02
+      stride: 50
+    - id: 7scenes_heads
+      dataset: seven_scenes
+      scene: heads
+      seq: auto
+      stride: 50
+    - id: 7scenes_office
+      dataset: seven_scenes
+      scene: office
+      seq: auto
+      stride: 50
+    - id: 7scenes_pumpkin
+      dataset: seven_scenes
+      scene: pumpkin
+      seq: auto
+      stride: 50
+    - id: 7scenes_redkitchen
+      dataset: seven_scenes
+      scene: redkitchen
+      seq: auto
+      stride: 50
+    - id: 7scenes_stairs
+      dataset: seven_scenes
+      scene: stairs
+      seq: auto
+      stride: 50
+    - id: nrgbd_whiteroom
+      dataset: neural_rgbd
+      scene: whiteroom
+      stride: 100         # ext_v1과 동일 -> 결과 통합 비교
+    - id: nrgbd_staircase
+      dataset: neural_rgbd
+      scene: staircase
+      stride: 100
+    - id: nrgbd_breakfast_room
+      dataset: neural_rgbd
+      scene: breakfast_room
+      stride: 100
+    - id: nrgbd_green_room
+      dataset: neural_rgbd
+      scene: green_room
+      stride: 100
+
+weather:
+  variants: [fog_light, fog_mid, fog_heavy, fog_xheavy, fog_extreme,
+             smoke_mid, smoke_heavy,
+             rain_light, rain_mid, rain_heavy,
+             lowlight_light, lowlight_mid, lowlight_heavy]
+  seed: 0
+  fog:
+    beta: {light: 0.04, mid: 0.08, heavy: 0.16, xheavy: 0.32, extreme: 0.64}
+    airlight: [0.85, 0.85, 0.85]
+  smoke:
+    beta: {light: 0.03, mid: 0.06, heavy: 0.12}
+    sigma: {light: 0.05, mid: 0.10, heavy: 0.20}
+    airlight: [0.82, 0.80, 0.78]
+    noise_res: [8, 6, 4]
+    octaves: 4
+  rain:
+    beta: {light: 0.015, mid: 0.04, heavy: 0.09}
+    density: {light: 150, mid: 400, heavy: 900}
+    length: {light: 12, mid: 18, heavy: 26}
+    airlight: [0.72, 0.74, 0.78]
+  lowlight:
+    gamma: {light: 1.6, mid: 2.2, heavy: 3.0}
+    gain: {light: 0.55, mid: 0.32, heavy: 0.16}
+    sigma: {light: 0.004, mid: 0.008, heavy: 0.015}
+    tint: [0.96, 0.99, 1.06]
+
+cases: [c0, c1, c2]
+c2_input_dir: restored
+
+eval:
+  max_depth: 10.0
+  align: scale&shift
+  pose_align: sim3
+  crop224: true
+  icp_threshold: 0.1
+  max_points: 500000
+  use_gpu: true

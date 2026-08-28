@@ -1,0 +1,18 @@
+# C3 학습 데이터 구성(실험맥락 §8 + 13번 센서스, 2026-08-26).
+#
+# - 7-Scenes: TrainSplit.txt에 있고 디스크에 존재하는 seq만 동적 포함
+#   (13번 센서스: chess 1, fire 1, office 6, pumpkin 4, redkitchen 7,
+#    stairs 4 seq / heads 0 = 총 21,000프레임).
+# - NRGBD: 비평가 5장면(whiteroom/staircase/breakfast_room/green_room
+#   및 기타 평가 장면 제외) = 5,536프레임.
+# - TartanAir V2는 평가 전용(학습 미포함, 일반화 클레임 보존).
+#
+# 루트는 서버 절대경로(ext_v2_resolved.yaml과 동일).
+seven_scenes_root: /data/cadet/hyunjun/spaceai-research/data/7scenes
+neural_rgbd_root: /data/cadet/hyunjun/spaceai-research/data/neural_rgbd
+
+seven_scenes: [chess, fire, office, pumpkin, redkitchen, stairs]
+neural_rgbd: [kitchen, grey_white_room, complete_kitchen, morning_apartment, thin_geometry]
+
+# 스모크/디버그용(0 = 제한 없음). trainer --max-frames-per-seq로 덮어쓴다.
+max_frames_per_seq: 0

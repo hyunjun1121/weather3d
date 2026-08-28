@@ -1,0 +1,70 @@
+# core 소규모 실험(영상 4개) 설정.
+# 확장(ext) 시 sequences/variants를 늘려 같은 파이프라인을 재사용한다.
+# 상대 경로는 이 설정 파일 위치(experiments/) 기준으로 해석된다.
+
+experiment: core_v1
+
+streamvggt:
+  src_dir: ../../third_party/StreamVGGT/src
+  weights: ../../third_party/StreamVGGT/ckpt/checkpoints.pth   # HF lch01/StreamVGGT
+  device: cuda
+  size: 518          # StreamVGGT 평가 규격
+  crop: false        # video_depth 평가 경로와 동일(no crop)
+
+data:
+  seven_scenes_root: ../../data/7scenes
+  neural_rgbd_root: ../../data/neural_rgbd
+  sequences:
+    # 7-Scenes: SimpleRecon test split에 포함된 시퀀스(평가 전용).
+    # fine-tuning 데이터는 TrainSplit.txt 시퀀스를 사용해 오염을 방지한다.
+    - id: 7scenes_chess_seq-01
+      dataset: seven_scenes
+      scene: chess
+      seq: seq-01
+      stride: 50          # 1000 frames -> 약 20 frames
+    - id: 7scenes_fire_seq-02
+      dataset: seven_scenes
+      scene: fire
+      seq: seq-02
+      stride: 50
+    # 4번째 영상: heads. seq: auto는 서버 스크립트가 heads/TestSplit.txt의
+    # 첫 test seq로 확정해 configs/_auto_run.yaml에 채운다(02 실측: TUM zip에
+    # copan이 없어 Neural-RGBD 2번째 scene 대신 7-Scenes heads를 사용).
+    - id: 7scenes_heads
+      dataset: seven_scenes
+      scene: heads
+      seq: auto
+      stride: 50
+    # Neural-RGBD: scripts/convert_nrgbd.py가 zip 내부 구조(images/, depth/)를
+    # 로더 형식으로 정규화한다. 2번째 NRGBD scene은 확장(ext) 때 추가.
+    - id: nrgbd_whiteroom
+      dataset: neural_rgbd
+      scene: whiteroom
+      stride: 100        # 1676 frames -> 약 17 frames(04의 200은 9frames로 표본 얇음)
+
+weather:
+  # 04 결과: beta 0.16(fog_heavy)까지는 fire/whiteroom에서 저하가 거의 없어
+  # 강도 스케일 상단을 확장한다(저하 발생 구간 탐색 = core 분석 축).
+  variants: [fog_light, fog_mid, fog_heavy, fog_xheavy, fog_extreme, smoke_mid, smoke_heavy]
+  seed: 0
+  fog:
+    beta: {light: 0.04, mid: 0.08, heavy: 0.16, xheavy: 0.32, extreme: 0.64}   # 1/m, 실내(~10m) 기준
+    airlight: [0.85, 0.85, 0.85]
+  smoke:
+    beta: {light: 0.03, mid: 0.06, heavy: 0.12}
+    sigma: {light: 0.05, mid: 0.10, heavy: 0.20}
+    airlight: [0.82, 0.80, 0.78]
+    noise_res: [8, 6, 4]   # (nx, ny, nt) 기본 격자
+    octaves: 4
+
+cases: [c0, c1, c2]    # c2는 restored/ 프레임이 없으면 [MISSING INPUT] 건너뜀
+c2_input_dir: restored  # outputs/<exp>/restored/<variant>/<seq_id>/
+
+eval:
+  max_depth: 10.0
+  align: scale&shift    # StreamVGGT video depth 프로토콜(LAD 기반)
+  pose_align: sim3
+  crop224: true         # mv_recon 프로토콜의 중앙 224 crop
+  icp_threshold: 0.1
+  max_points: 500000
+  use_gpu: true

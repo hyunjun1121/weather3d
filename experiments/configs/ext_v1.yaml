@@ -1,0 +1,54 @@
+# 확장(ext) 실험 설정(NRGBD staircase + breakfast_room).
+# core_v1과 동일 파이프라인/강도를 유지해 결과를 통합 비교한다.
+# 09 서버 스크립트가 NRGBD zip 완료 후 추출·변환을 마치면 실행한다.
+
+experiment: ext_v1
+
+streamvggt:
+  src_dir: ../../third_party/StreamVGGT/src
+  weights: ../../third_party/StreamVGGT/ckpt/checkpoints.pth   # HF lch01/StreamVGGT
+  device: cuda
+  size: 518          # StreamVGGT 평가 규격
+  crop: false        # video_depth 평가 경로와 동일(no crop)
+
+data:
+  seven_scenes_root: ../../data/7scenes
+  neural_rgbd_root: ../../data/neural_rgbd
+  sequences:
+    # 확장(ext): NRGBD 나머지 scene 2개. whiteroom과 동일 stride.
+    # 08 결과의 fog_extreme c2 급락(whiteroom 주도)이 다른 scene에서도
+    # 재현되는지가 확장 실험의 핵심 질문.
+    - id: nrgbd_staircase
+      dataset: neural_rgbd
+      scene: staircase
+      stride: 100
+    - id: nrgbd_breakfast_room
+      dataset: neural_rgbd
+      scene: breakfast_room
+      stride: 100
+
+weather:
+  # core_v1과 동일(강도 축 변경 없음 - 두 실험의 수치를 직접 비교).
+  variants: [fog_light, fog_mid, fog_heavy, fog_xheavy, fog_extreme, smoke_mid, smoke_heavy]
+  seed: 0
+  fog:
+    beta: {light: 0.04, mid: 0.08, heavy: 0.16, xheavy: 0.32, extreme: 0.64}   # 1/m, 실내(~10m) 기준
+    airlight: [0.85, 0.85, 0.85]
+  smoke:
+    beta: {light: 0.03, mid: 0.06, heavy: 0.12}
+    sigma: {light: 0.05, mid: 0.10, heavy: 0.20}
+    airlight: [0.82, 0.80, 0.78]
+    noise_res: [8, 6, 4]   # (nx, ny, nt) 기본 격자
+    octaves: 4
+
+cases: [c0, c1, c2]    # restored/ 가 없으면 c2는 [MISSING INPUT] 건너뜀
+c2_input_dir: restored  # outputs/<exp>/restored/<variant>/<seq_id>/
+
+eval:
+  max_depth: 10.0
+  align: scale&shift    # StreamVGGT video depth 프로토콜(LAD 기반)
+  pose_align: sim3
+  crop224: true         # mv_recon 프로토콜의 중앙 224 crop
+  icp_threshold: 0.1
+  max_points: 500000
+  use_gpu: true
