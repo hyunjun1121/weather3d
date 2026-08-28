@@ -1,0 +1,15 @@
+{
+  "title": "weather3d: physics-based fog and smoke synthesis benchmark and evaluation pipeline for streaming 3D reconstruction",
+  "description": "Code for the paper \"Weather Robustness of Streaming 3D Reconstruction: Limits of 2D Weather-Restoration Preprocessing under Physics-Based Fog and Smoke Synthesis\". The pipeline measures how physics-based synthesized fog and smoke degrade a streaming 3D reconstruction model (StreamVGGT), and whether 2D video weather restoration (ViWS-Net) applied as a preprocessing step recovers the loss.",
+  "license": "MIT",
+  "upload_type": "software",
+  "version": "v1.0.0",
+  "keywords": [
+    "3D reconstruction",
+    "weather robustness",
+    "fog synthesis",
+    "depth estimation",
+    "camera pose estimation"
+  ],
+  "language": "eng"
+}
