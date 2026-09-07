@@ -248,7 +248,7 @@ license), and the 7-Scenes / Neural-RGBD datasets (their respective terms).
 
 ## Citation
 
-v1.0.1 is archived on Zenodo:
-<https://doi.org/10.5281/zenodo.22137888> (all versions:
-<https://doi.org/10.5281/zenodo.22136904>). The v2.0.0 DOI will be added
-here after archiving. A BibTeX entry will be added upon paper publication.
+v2.0.0 is archived on Zenodo:
+<https://doi.org/10.5281/zenodo.22586228> (all versions:
+<https://doi.org/10.5281/zenodo.22136904>). A BibTeX entry will be added
+upon paper publication.
