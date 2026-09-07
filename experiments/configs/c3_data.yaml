@@ -7,9 +7,9 @@
 #   및 기타 평가 장면 제외) = 5,536프레임.
 # - TartanAir V2는 평가 전용(학습 미포함, 일반화 클레임 보존).
 #
-# 루트는 서버 절대경로(ext_v2_resolved.yaml과 동일).
-seven_scenes_root: /data/cadet/hyunjun/spaceai-research/data/7scenes
-neural_rgbd_root: /data/cadet/hyunjun/spaceai-research/data/neural_rgbd
+# 루트는 사용자 환경에 맞게 수정(아래는 저장소 루트 기준 상대경로 예시).
+seven_scenes_root: data/7scenes
+neural_rgbd_root: data/neural_rgbd
 
 seven_scenes: [chess, fire, office, pumpkin, redkitchen, stairs]
 neural_rgbd: [kitchen, grey_white_room, complete_kitchen, morning_apartment, thin_geometry]

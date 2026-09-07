@@ -494,6 +494,7 @@ def test_parse_defaults():
     assert args.foreach_optimizer is False
     assert args.ddp_no_find_unused is False
     assert args.mixed_precision == "fp16"
+    assert args.cudnn_benchmark is False
 
 
 def main():  # run_all.py 호환(개별 실행용)

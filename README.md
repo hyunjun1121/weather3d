@@ -2,11 +2,17 @@
 
 Code for the paper **"Weather Robustness of Streaming 3D Reconstruction:
 Limits of 2D Weather-Restoration Preprocessing under Physics-Based Fog and
-Smoke Synthesis"**.
+Smoke Synthesis"**, and for its follow-up capacity study **"Limited
+Adaptation Beats Full Fine-Tuning: Pre-Registered Weather Robustness for
+Streaming 3D Reconstruction"**.
 
 The pipeline measures how physics-based synthesized fog and smoke degrade a
 streaming 3D reconstruction model (StreamVGGT), and whether 2D video weather
 restoration (ViWS-Net) applied as a preprocessing step recovers the loss.
+The follow-up adds a pre-registered three-arm fine-tuning study: full
+fine-tuning with clean replay, degraded-only training, and LoRA (rank 16,
+0.56% of parameters), judged by machine-checked gates with paired Wilcoxon
+tests, bootstrap confidence intervals, and Holm correction.
 
 ## Pipeline
 
@@ -140,9 +146,50 @@ data/
 |---|---|
 | `configs/core_v1.yaml` | core four-scene set: 7-Scenes chess, fire, heads + Neural-RGBD whiteroom; five fog + two smoke severities |
 | `configs/ext_v1.yaml` | extension scenes: Neural-RGBD staircase, breakfast_room (same pipeline and severities) |
-| `configs/ext_v2.yaml` | fine-tuning data configuration, beyond the paper |
-| `configs/ext_v2_tartanair.yaml` | TartanAirV2 generalization data for fine-tuning, beyond the paper |
-| `configs/c3_data.yaml` | c3 fine-tuning dataset configuration, beyond the paper |
+| `configs/ext_v2.yaml` | benchmark grid used in the follow-up study (evaluation scenes + variants) |
+| `configs/ext_v2_tartanair.yaml` | TartanAirV2 generalization data (evaluation only, excluded from training) |
+| `configs/c3_data.yaml` | fine-tuning dataset configuration (set `seven_scenes_root` / `neural_rgbd_root` to your local paths) |
+
+## Fine-tuning (C3 capacity study)
+
+The follow-up paper fine-tunes StreamVGGT in three arms from the public
+checkpoint — R1 full fine-tuning on a 50/50 clean-replay + degraded
+mixture, R2 degraded-only training, R3 LoRA r=16 on attention (merged into
+the base weights at save time) — under a fixed recipe: 6,600 steps, peak
+lr 1e-5 with 300-step warmup, effective batch 2, fp16 + gradient
+checkpointing, and a frozen clean-view teacher providing regression
+targets on degraded inputs.
+
+```bash
+cd experiments
+# one arm (mode: r1 | r2; R3 = the r1 recipe with --lora-r 16).
+# Single GPU: plain python; multi-GPU: accelerate launch --multi_gpu.
+PYTHONPATH=src python -B src/weather3d/train/trainer.py \
+  --mode r1 --config configs/c3_data.yaml \
+  --svggt-src <path/to/StreamVGGT>/src \
+  --ckpt <path/to/StreamVGGT>/ckpt/checkpoints.pth \
+  --out outputs/finetune/r1 \
+  --grad-checkpoint --ddp-bucket-view --foreach-optimizer
+# re-evaluate a fine-tuned checkpoint on the benchmark grid: copy
+# configs/ext_v2.yaml, point `model.weights` at outputs/finetune/r1/
+# final_model.pth, set `output_dir` and `cases: [c0, c1]`, then:
+python -B run_infer.py --config configs/_finetune_eval_r1.yaml
+python -B run_evaluate.py --config configs/_finetune_eval_r1.yaml
+python -B run_report.py --config configs/_finetune_eval_r1.yaml
+# pre-registered gate statistics (G1/G2/G3):
+PYTHONPATH=src python -B src/weather3d/stats.py \
+  --base-csv <grid results.csv> --arm r1=outputs/finetune_eval/r1/results.csv \
+  --base-ta-csv <tartanair results.csv> \
+  --arm-ta r1=outputs/finetune_eval/r1_ta/results.csv \
+  --out-dir outputs/stats
+```
+
+Success criteria were pre-registered before training: G1 superiority over
+the degraded baseline on >= 4/7 key metrics, G2 superiority over the
+restoration pipeline on >= 4/7, G3 clean-scene regression within 5% on
+>= 6/7. `src/weather3d/stats.py` implements the Wilcoxon signed-rank
+test (exact enumeration for n<=16), deterministic paired bootstrap 95%
+CIs, Holm correction, and the machine verdict.
 
 ## Usage
 
@@ -168,9 +215,10 @@ Partial runs: `--cases`, `--variants` (e.g. `fog_mid`), `--sequences`
 
 ```bash
 cd experiments
-python -B tests/run_all.py        # 20 unit tests (synthesis math, noise
-                                  # determinism/time consistency, Umeyama/ATE/RPE
-                                  # known-answer, reconstruction metric regression)
+python -B tests/run_all.py        # 65 unit tests (synthesis math, noise
+                                  # determinism, pose/reconstruction metric
+                                  # known-answer, trainer arg/LoRA merge,
+                                  # Wilcoxon/Holm/bootstrap statistics)
 python -B tests/model_smoke.py    # weight load + dummy inference (needs weights)
 ```
 
@@ -182,9 +230,25 @@ Third-party components keep their original licenses: StreamVGGT code and
 weights (CC BY-NC-SA 4.0; research use only), ViWS-Net (its repository
 license), and the 7-Scenes / Neural-RGBD datasets (their respective terms).
 
+## Changelog
+
+- **v2.0.0** (2026-09-07) — fine-tuning capacity study release: `--cudnn-benchmark`
+  flag with default OFF (synced; unconditional `benchmark = True` inflated the
+  teacher-stage peak by ~10 GiB on 48 GB GPUs), matching trainer test.
+  Path hygiene: `configs/c3_data.yaml` now uses repo-relative dataset roots
+  (set them to your local layout); the runtime-resolved
+  `configs/_ext_v2_resolved.yaml` was removed from the repository (regenerate
+  it by running the pipeline's resolve step, or copy `configs/ext_v2.yaml`
+  and fill in your paths). Earlier releases contained absolute paths from the
+  development server in these two files; the Zenodo archives of v1.0.x are
+  immutable and still contain them.
+- **v1.0.1** (2026-08-28) — Zenodo creators metadata.
+- **v1.0.0** (2026-08-28) — initial public snapshot (evaluation pipeline,
+  weather synthesis, restoration case, fine-tuning trainer, statistics).
+
 ## Citation
 
-This release (v1.0.1) is archived on Zenodo:
+v1.0.1 is archived on Zenodo:
 <https://doi.org/10.5281/zenodo.22137888> (all versions:
-<https://doi.org/10.5281/zenodo.22136904>). A BibTeX entry will be added
-upon paper publication.
+<https://doi.org/10.5281/zenodo.22136904>). The v2.0.0 DOI will be added
+here after archiving. A BibTeX entry will be added upon paper publication.

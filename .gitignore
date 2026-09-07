@@ -7,3 +7,4 @@ third_party/
 outputs/
 *.npz
 .pytest_cache/
+experiments/configs/_*_resolved.yaml

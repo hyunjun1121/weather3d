@@ -158,6 +158,10 @@ def parse_args() -> argparse.Namespace:
                    help="find_unused_parameters=False + track_head 동결. "
                         "query_points=None 경로에서 track_head는 절대 실행되지 "
                         "않아 학습 수학 불변 — DDP 미사용 param 탐색 비용 제거")
+    p.add_argument("--cudnn-benchmark", action="store_true",
+                   help="cudnn benchmark 모드. 기본 OFF — 48GB급 GPU에서 첫 conv "
+                        "탐색 워크스페이스가 teacher 피크를 약 +10GiB 끌어올린 "
+                        "실측이 있어 메모리 바운드 워크로드에는 기본 꺼둔다")
     return p.parse_args()
 
 
@@ -525,8 +529,11 @@ def main() -> int:
         kwargs_handlers=[ddp_kwargs],
     )
     device = accelerator.device
-    # 학습 입력 shape은 고정(views x [1,3,392,518])이라 benchmark가 안전하다.
-    torch.backends.cudnn.benchmark = True
+    # benchmark=True는 첫 conv 호출의 알고리즘 탐색 워크스페이스로 teacher
+    # 단계 피크를 크게 끌어올릴 수 있다(입력 shape이 고정이라도 탐색
+    # 트랜지언트 자체가 메모리 바운드 워크로드에 손해). 기본 OFF.
+    if args.cudnn_benchmark:
+        torch.backends.cudnn.benchmark = True
     torch.manual_seed(args.seed + 1000 * accelerator.process_index)
     np.random.seed(args.seed + 1000 * accelerator.process_index)
 
